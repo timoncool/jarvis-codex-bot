@@ -1,0 +1,29 @@
+default_engine = "codex"
+transport = "telegram"
+
+[codex]
+mode = "app_server"
+extra_args = ["-c", "notify=[]"]
+
+[plugins]
+enabled = ["takopi"]
+
+[transports.telegram]
+session_mode = "chat"
+message_overflow = "split"
+show_resume_line = false
+forward_coalesce_s = 0.0
+voice_transcription = true
+voice_transcription_model = "large-v3"
+voice_transcription_base_url = "http://127.0.0.1:8171/v1"
+voice_transcription_api_key = "local"
+
+[transports.telegram.topics]
+enabled = false
+scope = "main"
+
+[transports.telegram.files]
+enabled = true
+auto_put = true
+auto_put_mode = "prompt"
+uploads_dir = "incoming"

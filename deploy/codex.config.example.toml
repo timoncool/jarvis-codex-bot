@@ -1,0 +1,22 @@
+default_permissions = "jarvis"
+project_root_markers = []
+model = "gpt-6-luna"
+model_reasoning_effort = "medium"
+approval_policy = "never"
+web_search = "live"
+
+[projects."/opt/jarvis"]
+trust_level = "trusted"
+
+[permissions.jarvis.filesystem]
+":minimal" = "read"
+":workspace_roots" = "write"
+"/usr" = "read"
+"/bin" = "read"
+"/lib" = "read"
+"/lib64" = "read"
+"/etc" = "read"
+"/opt/jarvis/.venv" = "read"
+"/opt/jarvis/tools" = "read"
+[permissions.jarvis.network]
+enabled = true

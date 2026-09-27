@@ -1,0 +1,11 @@
+openrouter==1.2.32
+faster-whisper
+fastapi
+uvicorn
+python-multipart
+python-docx
+openpyxl
+python-pptx
+reportlab
+Pillow
+pypdf

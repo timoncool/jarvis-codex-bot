@@ -1,0 +1,22 @@
+[Unit]
+Description=Jarvis asr
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=jarvis
+Group=jarvis
+WorkingDirectory=/opt/jarvis
+Environment=HOME=/home/jarvis
+EnvironmentFile=-/opt/jarvis/asr.env
+ExecStart=/opt/jarvis/.venv/bin/python /opt/jarvis/deploy/asr_start.py
+TimeoutStopSec=300
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=full
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
