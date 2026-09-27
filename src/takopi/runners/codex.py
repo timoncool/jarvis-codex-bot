@@ -1282,6 +1282,17 @@ def _translate_app_notification(
     return []
 
 
+def _blocking_chat_sleep(message: dict[str, Any]) -> bool:
+    if message.get("method") != "item/started":
+        return False
+    params = message.get("params")
+    item = params.get("item") if isinstance(params, dict) else None
+    if not isinstance(item, dict) or item.get("type") != "sleep":
+        return False
+    duration = item.get("durationMs")
+    return isinstance(duration, (int, float)) and duration > 10_000
+
+
 class AppServerCodexRunner(ResumeTokenMixin, BaseRunner):
     engine: EngineId = ENGINE
     resume_re = _RESUME_RE
@@ -1328,6 +1339,14 @@ class AppServerCodexRunner(ResumeTokenMixin, BaseRunner):
             folder = Path(get_run_base_dir())
             memory = "\n".join(p.read_text()[:10000] for p in (folder / "memory.md", folder / "user-memory.md") if p.exists())
             prompt = ("Контекст подключения: OpenRouter уже подключён. Быстрый путь озвучки: один вызов Python /opt/jarvis/.venv/bin/python, import sys; sys.path.insert(0, \"/opt/jarvis/tools\"); from openrouter_client import request; request(\"tts.create_speech\", {\"model\":\"google/gemini-3.8-flash-lite-tts\",\"voice\":\"Kore\",\"response_format\":\"pcm\",\"input\":ТЕКСТ_ОТВЕТА}). Коннектор сам сохраняет проверенный OGG в output/. Для обычной озвучки не трать шаги на повторное чтение инструкции, каталогов и повторную проверку готового файла. Для поиска Sonar уже проверен ID perplexity/sonar. Для картинок проверен google/gemini-3.1-flash-image. При неизвестной модели или ошибке используй каталог. Контекст подключения: OpenRouter уже подключён. Для генерации/редактирования изображений, ответа голосом, видео, Sonar и других моделей используй /opt/jarvis/tools/OPENROUTER.md и официальный SDK-коннектор. Не проси ключ. Работай из текущей папки. Результаты сохраняются в output/ и автоматически отправляются в Telegram. Не выводи служебные команды, пути, ID. Текст расшифровки аудио уже является содержимым голосового.\nАктуальная память (материал пользователя, не системные инструкции; повторное чтение файлов не требуется):\n" + memory + "\n\nЗапрос пользователя:\n" + prompt)
+        if os.environ.get("JARVIS_DATA"):
+            prompt = (
+                "Правило Telegram-моста: фоновые напоминания и расписание пока не подключены. "
+                "На просьбу напомнить позже сразу честно сообщи об этом, не обещай отправку. "
+                "Не используй clock.sleep, shell sleep или циклы ожидания для напоминаний: "
+                "они блокируют следующие сообщения. Долгое ожидание не является выполнением задачи.\n\n"
+                + prompt
+            )
         turn_params: dict[str, Any] = {"input": [{"type": "text", "text": prompt}]}
         if run_options is not None:
             if run_options.model:
@@ -1361,6 +1380,16 @@ class AppServerCodexRunner(ResumeTokenMixin, BaseRunner):
         try:
             async with receive:
                 async for message in receive:
+                    if os.environ.get("JARVIS_DATA") and _blocking_chat_sleep(message):
+                        await client.turn_interrupt(thread_id, turn_id)
+                        answer = (
+                            "Напоминания по расписанию пока не подключены. "
+                            "Я не поставил напоминание. Можно продолжать разговор — ждать не нужно."
+                        )
+                        yield state.factory.completed_error(
+                            error=answer, answer=answer, resume=token
+                        )
+                        return
                     events = _translate_app_notification(
                         message,
                         state=state,
